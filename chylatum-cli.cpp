@@ -32,7 +32,7 @@ int main(int args, char* argv[]){
 	const result resultr = rectify(ql, rl, vle, 100, false);
 	const result results = strip(resultr.xn, sl, vle, 100, false);
 
-	std::cout << std::setprecision(2) << std::showpoint << std::right;
+	std::cout << std::setprecision(2) << std::fixed << std::right;
 	std::cout << std::setw(48) << std::setfill('=') << '\0' << std::setfill(' ') << '\n';
 	std::cout << "Agruments\n------\n";
 	std::cout << " R: " << R << std::setw(16) << "ap: " << ap << std::setw(16) << " q: " << q << '\n';
