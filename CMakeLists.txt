@@ -6,12 +6,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include(FetchContent)
-FetchContent_Declare(
-    cli11
-    GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git
-    GIT_TAG v2.4.2
-)
-FetchContent_MakeAvailable(cli11)
 
 # Core library
 add_library(chylatum
@@ -22,6 +16,12 @@ target_include_directories(chylatum PUBLIC
 )
 
 # CLI executable
+FetchContent_Declare(cli11
+    GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git
+    GIT_TAG v2.4.2
+)
+FetchContent_MakeAvailable(cli11)
+
 add_executable(chylatum-cli
     chylatum-cli.cpp
 )
@@ -29,3 +29,21 @@ target_link_libraries(chylatum-cli PRIVATE
     chylatum
     CLI11::CLI11
 )
+
+# TUI executable
+FetchContent_Declare(ftxui
+  GIT_REPOSITORY https://github.com/ArthurSonzogni/FTXUI
+  GIT_TAG v6.1.9
+)
+FetchContent_MakeAvailable(ftxui)
+add_executable(chylatum-tui
+    chylatum-tui.cpp
+)
+target_link_libraries(chylatum-tui PRIVATE
+    chylatum
+    ftxui::screen
+    ftxui::dom
+    ftxui::component
+)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
