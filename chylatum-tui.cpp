@@ -4,6 +4,7 @@
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
 
+#include <ftxui/dom/flexbox_config.hpp>
 #include <string>
 #include <format>
 
@@ -16,6 +17,8 @@ int main(){
 
     auto calculate = [&]{
         using namespace std;
+        if (!R_s.length() || !q_s.length() || !ap_s.length() || !xd_s.length() || !xf_s.length() || !xw_s.length())
+            return;
         R = stof(R_s), q = stof(q_s), ap = stof(ap_s);
         xd = stof(xd_s), xf = stof(xf_s), xw = stof(xw_s);
 
@@ -33,53 +36,92 @@ int main(){
         Ns_s = R > Rm ? to_string(sresult.n) : "inf";
     };
 
-    ftxui::ComponentDecorator callback = ftxui::CatchEvent([&](ftxui::Event event) {
-        if (event.character().length() && event.character().back() == '\n'){
-            calculate();
-            return true;
-        }
-        return false;
-    });
-    ftxui::Component R_i = ftxui::Input(&R_s) | callback;
-    ftxui::Component q_i = ftxui::Input(&q_s) | callback;
-    ftxui::Component ap_i = ftxui::Input(&ap_s) | callback;
-    ftxui::Component xd_i = ftxui::Input(&xd_s) | callback;
-    ftxui::Component xf_i = ftxui::Input(&xf_s) | callback;
-    ftxui::Component xw_i = ftxui::Input(&xw_s) | callback;
+    auto newInput = [&calculate](std::string& s){
+        ftxui::Component input = ftxui::Input(&s);
+        ftxui::ComponentDecorator wrap = ftxui::CatchEvent([&s, &calculate](ftxui::Event event){
+            if (event == ftxui::Event::Escape){
+                s.clear();
+                return true;
+            }
+            if (event == ftxui::Event::ArrowUp || event == ftxui::Event::ArrowDown
+                || event == ftxui::Event::ArrowLeft || event == ftxui::Event::ArrowRight 
+                || event == ftxui::Event::Backspace || event == ftxui::Event::Tab || event == ftxui::Event::TabReverse
+            ) return false;
 
-    ftxui::Component component = ftxui::Container::Vertical({
+            if (!event.character().length()) return true;
+            switch (event.character().back()) {
+                case '0': case '1': case '2': case '3': case '4': case '5':
+                case '6': case '7': case '8': case '9': 
+                    return false;
+                case '.':
+                    return !s.length() || s.find('.') != std::string::npos;
+                case '\n': case ' ':
+                    calculate();
+                    return true;
+                default:
+                    return true;
+            }
+        });
+        return input | wrap;
+    };
+    ftxui::Component R_i = newInput(R_s), q_i = newInput(q_s), ap_i = newInput(ap_s);
+    ftxui::Component xd_i = newInput(xd_s), xf_i = newInput(xf_s), xw_i = newInput(xw_s);
+    ftxui::Component inputComponents = ftxui::Container::Vertical({
         R_i, q_i, ap_i, xd_i, xf_i, xw_i
     });
 
     ftxui::Decorator inputStyle = ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 12) | ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 1) | ftxui::border;
-    ftxui::Decorator sepaStyle = ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 64);
-    ftxui::Component renderer = ftxui::Renderer(component, [&]{
-        return ftxui::vbox({
-            ftxui::separatorDouble() | sepaStyle,
-            ftxui::text("Arguments"),
-            ftxui::separator() | sepaStyle,
-            ftxui::hbox(
-                    ftxui::text(" R: "), R_i->Render() | inputStyle, 
-                    ftxui::text(" q: "), q_i->Render() | inputStyle, 
-                    ftxui::text("ap: "), ap_i->Render() | inputStyle
-                ),
-            ftxui::hbox(
-                    ftxui::text("xd: "), xd_i->Render() | inputStyle, 
-                    ftxui::text("xf: "), xf_i->Render() | inputStyle, 
-                    ftxui::text("xw: "), xw_i->Render() | inputStyle
-                ),
-            ftxui::separatorDouble() | sepaStyle,
-            ftxui::text("Results"),
-            ftxui::separator() | sepaStyle,
-            ftxui::text(std::format("{: <30} : {: <15}", "Rm (Minimum Reflux Ratio)", Rm_s)),
-            ftxui::text(std::format("{: <30} : {: <15}", "Nt (Total Number)", Nt_s)), 
-            ftxui::text(std::format("{: <30} : {: <15}", "Nf (Feed Location)", Nf_s)),
-            ftxui::text(std::format("{: <30} : {: <15}", "Nr (Rectifying)", Nf_s)),
-            ftxui::text(std::format("{: <30} : {: <15}", "Ns (Stripping and Reboiler)", Ns_s)),
-            ftxui::separatorDouble() | sepaStyle
+
+    ftxui::Component renderer = ftxui::Renderer(inputComponents, [&]{
+
+        auto hSeparatorDouble = [](){
+            return ftxui::separatorDouble() | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 64);
+        };
+        auto hSeparator = [](){
+            return ftxui::separator() | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 16);
+        };
+        auto resultField = [](const std::string des, const std::string& res){
+            return ftxui::text(std::format("{: <30} : {: <15}", des, res));
+        };
+
+        ftxui::Element title = ftxui::text("CHYLATUM") | ftxui::bold | ftxui::italic | ftxui::center;
+        ftxui::Element guide = ftxui::text("TAB: move    ESC: clear    ENTER/SPACE: calculate") | ftxui::italic | ftxui::dim | ftxui::center;
+        ftxui::Element arguments = ftxui::vbox({
+            ftxui::text("Arguments") | ftxui::italic,
+            hSeparator(),
+            ftxui::hbox({
+                ftxui::hbox({ftxui::text(" R: "), R_i->Render() | inputStyle}),
+                ftxui::hbox({ftxui::text(" q: "), q_i->Render() | inputStyle}),
+                ftxui::hbox({ftxui::text("ap: "), ap_i->Render() | inputStyle}),
+            }),
+            ftxui::hbox({
+                ftxui::hbox({ftxui::text("xd: "), xd_i->Render() | inputStyle}),
+                ftxui::hbox({ftxui::text("xf: "), xf_i->Render() | inputStyle}),
+                ftxui::hbox({ftxui::text("xw: "), xw_i->Render() | inputStyle})
+            })
         });
+        ftxui::Element results = ftxui::vbox({
+            ftxui::text("Results") | ftxui::italic,
+            hSeparator(),
+            resultField("Rm (Minimum Reflux Ratio)", Rm_s),
+            resultField("Nt (Total Number)", Nt_s),
+            resultField("Nf (Feed Location)", Nf_s),
+            resultField("Nr (Rectifying)", Nf_s),
+            resultField("Ns (Stripping and Reboiler)", Ns_s)
+        });
+        ftxui::Element mainBox = ftxui::vbox({
+            title,
+            hSeparatorDouble(),
+            arguments,
+            hSeparatorDouble(),
+            results,
+            hSeparatorDouble(),
+            guide
+        });
+        return ftxui::vbox(ftxui::filler(), ftxui::hbox(ftxui::filler(), mainBox, ftxui::filler()), ftxui::filler());
     });
-    auto screen = ftxui::ScreenInteractive::TerminalOutput();
+
+    auto screen = ftxui::ScreenInteractive::Fullscreen();
     screen.Loop(renderer);
     return 0;
 }
