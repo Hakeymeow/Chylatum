@@ -37,10 +37,10 @@ int main(){
         Ns_s = R > Rm ? to_string(sresult.n) : "inf";
     };
 
-    auto newInput = [&calculate](std::string& s){
+    auto newInput = [&calculate](std::string& s, bool enable_negative = false){
         ftxui::Component input = ftxui::Input(&s);
         ftxui::Decorator inputStyle = ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 12) | ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 1) | ftxui::border;
-        ftxui::ComponentDecorator wrap = ftxui::CatchEvent([&s, &calculate](ftxui::Event event){
+        ftxui::ComponentDecorator wrap = ftxui::CatchEvent([&s, &calculate, enable_negative](ftxui::Event event){
             if (event == ftxui::Event::Escape){
                 s.clear();
                 return true;
@@ -57,6 +57,8 @@ int main(){
                     return false;
                 case '.':
                     return !s.length() || s.find('.') != std::string::npos;
+                case '-':
+                    return enable_negative && s.length();
                 case '\n': case ' ':
                     calculate();
                     return true;
@@ -66,7 +68,7 @@ int main(){
         });
         return input | wrap | inputStyle;
     };
-    ftxui::Component R_i = newInput(R_s), q_i = newInput(q_s), ap_i = newInput(ap_s);
+    ftxui::Component R_i = newInput(R_s), q_i = newInput(q_s, true), ap_i = newInput(ap_s);
     ftxui::Component xd_i = newInput(xd_s), xf_i = newInput(xf_s), xw_i = newInput(xw_s);
     ftxui::Component inputComponents = ftxui::Container::Vertical({
         R_i, q_i, ap_i, xd_i, xf_i, xw_i
